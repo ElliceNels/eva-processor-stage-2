@@ -1,10 +1,25 @@
 import json
 from datetime import datetime
 import matplotlib.pyplot as plt
+import sys
 from collections import Counter
 
-with open("data/eva-data.json", "r", encoding="utf-8") as file:
-    eva_data = json.load(file)
+if len(sys.argv) < 2:
+    print("Usage: eva-processor <filename>", file=sys.stderr)
+    exit(1)
+
+# argv[0] is the path to the current executable
+filename = sys.argv[1]
+
+try:
+    with open(filename, "r", encoding="utf-8") as file:
+        eva_data = json.load(file)
+except FileNotFoundError:
+    print(f"Error: File {filename} does not exist", file=sys.stderr)
+    sys.exit(1)
+except json.JSONDecodeError as e:
+    print(f"Error: File {filename} is not valid JSON ({e})", file=sys.stderr)
+    sys.exit(1)
 
 records = []
 
