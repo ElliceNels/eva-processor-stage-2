@@ -10,6 +10,7 @@ class EVADataProcessor:
         self.dates = []
         self.cumulative_hours = []
         self._calculate_cumulative_hours()
+        self.countries = {record[2] for record in self.records}
 
     def _parse_eva_data(self, eva_data):
         records = []
@@ -26,7 +27,7 @@ class EVADataProcessor:
             date = datetime.fromisoformat(date_text)
             duration_hours = EVADataProcessor._duration_text_to_hours(duration_text)
 
-            records.append((date, duration_hours, country))
+            records.append((date, duration_hours, country.lower()))
 
         records.sort(key=lambda record: record[0])
         return records
@@ -38,10 +39,73 @@ class EVADataProcessor:
             self.cumulative_hours.append(self.total_hours)
             self.total_hours_by_country[country] += duration_hours
 
+
+    def compare_countries(self, country_a, country_b, start_year, end_year):
+        if start_year > end_year:
+            raise ValueError("Invalid year range")
+
+        if country_a not in self.countries or country_b not in self.countries:
+            raise ValueError("Unknown country")
+
+        a_records = self.get_country_records(country_a)
+        b_records = self.get_country_records(country_b)
+
+        a_records = self.get_records_in_range(a_records, start_year, end_year)
+        b_records = self.get_records_in_range(b_records, start_year, end_year)
+
+        a_stats = self.get_records_stats(a_records)
+        b_stats = self.get_records_stats(b_records)
+
+        if a_stats["total"] > b_stats["total"]:
+            winner = country_a
+        elif b_stats["total"] > a_stats["total"]:
+            winner = country_b
+        else:
+            winner = "Tie"
+
+        return a_stats, b_stats, winner
+
+    def get_country_records(self, country):
+        records = []
+        for record in self.records:
+            if record[2].strip().lower() == country.strip().lower():
+                records.append(record)
+
+        return records
+
+    @staticmethod
+    def get_records_stats(records):
+        count = len(records)
+        total = sum(record[1] for record in records)
+        average = total / count if count > 0 else None
+
+        return {
+            "count": count,
+            "total": total,
+            "average": average
+        }
+
+    @staticmethod
+    def get_records_in_range(records, start_year, end_year):
+        if start_year > end_year:
+            raise ValueError("Start year cannot be after end year")
+
+        filtered_records = []
+
+        for record in records:
+            if start_year <= record[0].year <= end_year:
+                filtered_records.append(record)
+
+        return filtered_records
+
+
     @staticmethod
     def _duration_text_to_hours(duration_text):
         hours, minutes = map(int, duration_text.split(":"))
         return hours + minutes / 60
+
+    def get_countries(self):
+        return self.countries
 
     def get_records(self):
         return self.records
